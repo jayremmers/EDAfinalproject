@@ -1,0 +1,580 @@
+---
+title: "MentalHealthFinal"
+output: html_document
+date: "2024-11-18"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(ggplot2)
+mh <- read.csv("mental_health_dataset.csv")
+```
+
+## 1. Data Cleaning
+
+```{r}
+mh <- mh %>%
+  mutate(Gender = case_when(
+    Gender %in% c("Male") ~ "Male",
+    Gender %in% c("Female") ~ "Female",
+    TRUE ~ "Other/Didn't Say"
+  ))
+
+mh$Gender <- as.factor(mh$Gender)
+mh$Occupation <- as.factor(mh$Occupation)
+mh$Country <- as.factor(mh$Country)
+mh$Severity <- factor(mh$Severity, levels = c("None", "Low", "Medium", "High"), ordered = TRUE)
+mh$Mental_Health_Condition <- as.factor(mh$Mental_Health_Condition)
+mh$Stress_Level <- factor(mh$Stress_Level, levels = c("Low", "Medium", "High"), ordered = TRUE)
+mh$Consultation_History <- as.factor(mh$Consultation_History)
+```
+
+## 2. Data Exploration
+
+### Stress Level by Sleep
+```{r}
+ggplot(mh, aes(x = Stress_Level, y = Sleep_Hours, fill = Stress_Level)) +
+  geom_boxplot() +
+  scale_fill_manual(values = c("Low" = "springgreen3", "Medium" = "steelblue2", "High" = "sienna2")) +
+  geom_jitter(alpha = 0.2, width = .15) +
+  theme(
+    legend.position = "none",
+    axis.title = element_text(size = 17, family = "serif"),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  xlab("Stress Level") +
+  ylab("Hours of Sleep")
+```
+
+```{r}
+aov_result <- aov(Sleep_Hours ~ Stress_Level, data = mh)
+summary(aov_result)
+```
+
+### Stress Level by Work 
+```{r}
+ggplot(mh, aes(x = Stress_Level, y = Work_Hours, fill = Stress_Level)) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.2, width = .15) +
+  ggtitle("Hours Worked by Reported Stress Level") +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(hjust = 0.5, size = 16, family = "serif"),
+    axis.title = element_text(size = 12, family = "serif")
+  ) +
+  xlab("Stress Level") +
+  ylab("Hours Worked")
+```
+
+```{r}
+aov_result <- aov(Work_Hours ~ Stress_Level, data = mh)
+summary(aov_result)
+```
+
+### Stress Level by Physical Activity
+```{r}
+ggplot(mh, aes(x = Stress_Level, y = Physical_Activity_Hours, fill = Stress_Level)) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.2, width = .15) +
+  ggtitle("Hours of Physical Activity by Reported Stress Level") +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(hjust = 0.5, size = 16, family = "serif"),
+    axis.title = element_text(size = 12, family = "serif")
+  ) +
+  xlab("Stress Level") +
+  ylab("Hours of Physical Activity")
+```
+
+```{r}
+aov_result <- aov(Physical_Activity_Hours ~ Stress_Level, data = mh)
+summary(aov_result)
+```
+
+### Stress Level by Age
+```{r}
+ggplot(mh, aes(x = Stress_Level, y = Age, fill = Stress_Level)) +
+  geom_boxplot() +
+  geom_jitter(alpha = 0.2, width = .15) +
+  ggtitle("Age by Reported Stress Level") +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(hjust = 0.5, size = 16, family = "serif"),
+    axis.title = element_text(size = 12, family = "serif")
+  ) +
+  xlab("Stress Level") +
+  ylab("Age")
+```
+
+```{r}
+aov_result <- aov(Age ~ Stress_Level, data = mh)
+summary(aov_result)
+```
+
+### Stress Level by Gender
+```{r}
+counts <- mh %>%
+  group_by(Gender, Stress_Level) %>%
+  summarise(Count = n(), .groups = "drop")
+
+ggplot(counts, aes(x = Gender, y = Stress_Level, fill = Count)) +
+  geom_tile(color = "white") + # Create tiles with borders
+  geom_text(aes(label = Count), color = "black", size = 4) + # Add counts as text
+  scale_fill_gradient(low = "white", high = "red") + # Adjust the color gradient
+  theme_minimal() + # Minimal theme
+  labs(
+    x = "Gender",
+    y = "Stress Level",
+    fill = "Count"
+  ) +
+  theme(
+    axis.title = element_text(size = 17, family = "serif"),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  )
+```
+
+```{r}
+contingency_table <- table(mh$Stress_Level, mh$Gender)
+chisq.results <- chisq.test(contingency_table)
+print(chisq.results)
+
+chisq.results$stdres
+```
+
+Females are more unlikely to have low stress levels
+Males are a little more likely to have high stress levels
+Other/Didn't Say are more likely to have low stress levels
+
+### Stress Level by Country
+```{r}
+counts <- mh %>%
+  group_by(Country, Stress_Level) %>%
+  summarise(Count = n(), .groups = "drop")
+
+ggplot(counts, aes(x = Country, y = Stress_Level, fill = Count)) +
+  geom_tile(color = "white") + # Create tiles with borders
+  geom_text(aes(label = Count), color = "black", size = 4) + # Add counts as text
+  scale_fill_gradient(low = "white", high = "red") + # Adjust the color gradient
+  theme_minimal() + # Minimal theme
+  labs(
+    title = "Stress Levels by Country",
+    x = "Country",
+    y = "Stress Level",
+    fill = "Count"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, family = "serif"),
+    axis.text = element_text(size = 12, family = "serif")
+  )
+```
+
+```{r}
+contingency_table <- table(mh$Stress_Level, mh$Country)
+chisq.test(contingency_table)
+```
+
+### Stress Level by Occupation
+```{r}
+counts <- mh %>%
+  group_by(Occupation, Stress_Level) %>%
+  summarise(Count = n(), .groups = "drop")
+
+ggplot(counts, aes(x = Occupation, y = Stress_Level, fill = Count)) +
+  geom_tile(color = "white") + # Create tiles with borders
+  geom_text(aes(label = Count), color = "black", size = 4) + # Add counts as text
+  scale_fill_gradient(low = "white", high = "red") + # Adjust the color gradient
+  theme_minimal() + # Minimal theme
+  labs(
+    title = "Stress Levels by Country",
+    x = "Occupation",
+    y = "Stress Level",
+    fill = "Count"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, family = "serif"),
+    axis.text = element_text(size = 12, family = "serif")
+  )
+```
+
+```{r}
+contingency_table <- table(mh$Stress_Level, mh$Occupation)
+chisq.test(contingency_table)
+```
+
+### Mental Health Condition by Gender
+```{r}
+counts <- mh %>%
+  group_by(Gender, Mental_Health_Condition) %>%
+  summarise(Count = n(), .groups = "drop")
+
+ggplot(counts, aes(x = Gender, y = Mental_Health_Condition, fill = Count)) +
+  geom_tile(color = "white") + # Create tiles with borders
+  geom_text(aes(label = Count), color = "black", size = 4) + # Add counts as text
+  scale_fill_gradient(low = "white", high = "purple") + # Adjust the color gradient
+  theme_minimal() + # Minimal theme
+  labs(
+    title = "Mental Health Condition by Country",
+    x = "Gender",
+    y = "Yes or No",
+    fill = "Count"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, family = "serif")
+  )
+```
+
+```{r}
+contingency_table <- table(mh$Mental_Health_Condition, mh$Gender)
+chisq.test(contingency_table)
+```
+
+### Mental Health Condition by Country
+```{r}
+counts <- mh %>%
+  group_by(Country, Mental_Health_Condition) %>%
+  summarise(Count = n(), .groups = "drop")
+
+ggplot(counts, aes(x = Country, y = Mental_Health_Condition, fill = Count)) +
+  geom_tile(color = "white") + # Create tiles with borders
+  geom_text(aes(label = Count), color = "black", size = 4) + # Add counts as text
+  scale_fill_gradient(low = "white", high = "purple") + # Adjust the color gradient
+  theme_minimal() + # Minimal theme
+  labs(
+    title = "Mental Health Condition by Country",
+    x = "Country",
+    y = "Yes or No",
+    fill = "Count"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, family = "serif"),
+    axis.text = element_text(size = 12, family = "serif")
+  )
+```
+
+```{r}
+contingency_table <- table(mh$Mental_Health_Condition, mh$Country)
+chisq.test(contingency_table)
+```
+
+### Mental Health Condition by Occupation
+```{r}
+counts <- mh %>%
+  group_by(Occupation, Mental_Health_Condition) %>%
+  summarise(Count = n(), .groups = "drop")
+
+ggplot(counts, aes(x = Occupation, y = Mental_Health_Condition, fill = Count)) +
+  geom_tile(color = "white") + # Create tiles with borders
+  geom_text(aes(label = Count), color = "black", size = 4) + # Add counts as text
+  scale_fill_gradient(low = "white", high = "purple") + # Adjust the color gradient
+  theme_minimal() + # Minimal theme
+  labs(
+    title = "Mental Health Condition by Occupation",
+    x = "Occupation",
+    y = "Yes or No",
+    fill = "Count"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, family = "serif"),
+    axis.text = element_text(size = 12, family = "serif")
+  )
+```
+
+```{r}
+contingency_table <- table(mh$Mental_Health_Condition, mh$Occupation)
+chisq.test(contingency_table)
+```
+
+### Stress Level by Mental Health Condition
+```{r}
+counts <- mh %>%
+  group_by(Stress_Level, Mental_Health_Condition) %>%
+  summarise(Count = n(), .groups = "drop")
+
+ggplot(counts, aes(x = Stress_Level, y = Mental_Health_Condition, fill = Count)) +
+  geom_tile(color = "white") + # Create tiles with borders
+  geom_text(aes(label = Count), color = "black", size = 4) + # Add counts as text
+  scale_fill_gradient(low = "white", high = "gold") + # Adjust the color gradient
+  theme_minimal() + # Minimal theme
+  labs(
+    x = "Stress Level",
+    y = "Mental Health Condition?",
+    fill = "Count"
+  ) +
+  theme(
+    axis.title = element_text(size = 17, family = "serif"),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  )
+```
+
+```{r}
+contingency_table <- table(mh$Stress_Level, mh$Mental_Health_Condition)
+chisq.results <- chisq.test(contingency_table)
+print(chisq.results)
+
+chisq.results$stdres
+```
+
+People without mental health conditions are more likely to have low stress levels.
+People with mental health conditions are less likely to have low stress levels.
+
+## 3. Decision Trees
+
+### Stress Level Decision Tree
+```{r}
+library(rpart)
+library(rpart.plot)
+
+# Build the model
+tree_model <- rpart(Stress_Level ~ Age + Gender + Occupation + Country + 
+                      Mental_Health_Condition + Severity + Consultation_History +
+                      Sleep_Hours + Work_Hours + Physical_Activity_Hours, 
+                      data = mh, method = "class")
+
+# Visualize the tree
+rpart.plot(tree_model, type = 4, extra = 101)
+
+# Evaluate predictions
+predictions <- predict(tree_model, mh, type = "class")
+confusion_matrix <- table(Predicted = predictions, Actual = mh$Stress_Level)
+print(confusion_matrix)
+
+# Display the complexity parameter table
+printcp(tree_model)
+```
+
+Even after 8 splits, the relative error is 0.848. This means the error was reduced by about 15% from the error at the root.
+
+## Mental Health Condition Decision Tree
+```{r}
+library(rpart)
+library(rpart.plot)
+
+# Build the model
+tree_model <- rpart(Mental_Health_Condition ~ Age + Gender + Occupation + Country +
+                      Stress_Level + Consultation_History +
+                      Sleep_Hours + Work_Hours + Physical_Activity_Hours, 
+                      data = mh, method = "class")
+
+# Visualize the tree
+rpart.plot(tree_model, type = 4, extra = 101)
+
+# Evaluate predictions
+predictions <- predict(tree_model, mh, type = "class")
+confusion_matrix <- table(Predicted = predictions, Actual = mh$Mental_Health_Condition)
+print(confusion_matrix)
+
+# Display the complexity parameter table
+printcp(tree_model)
+```
+
+After 17 splits, the relative error is 0.709. This means the error was reduced by about 30% from the error at the root. This is better than the decision tree for stress level but it is much more complex.
+
+### Find Optimal CP
+```{r}
+library(caret)
+
+# Define training control with 10-fold cross-validation
+train_control <- trainControl(method = "cv", number = 20)
+
+# Train a decision tree
+cv_model <- train(Mental_Health_Condition ~ Age + Gender + Occupation + Country +
+                      Stress_Level + Consultation_History +
+                      Sleep_Hours + Work_Hours + Physical_Activity_Hours, 
+                      data = mh, 
+                  method = "rpart", 
+                  trControl = train_control)
+
+# View results
+print(cv_model)
+```
+
+The optimal CP is 0.01752577
+
+### Pruned Tree
+```{r}
+# Prune the tree
+pruned_tree <- prune(tree_model, cp = 0.01752577) # Choose optimal CP based on cv_model
+rpart.plot(pruned_tree, type = 4, extra = 101)
+
+# Evaluate predictions
+predictions <- predict(pruned_tree, mh, type = "class")
+confusion_matrix <- table(Predicted = predictions, Actual = mh$Mental_Health_Condition)
+print(confusion_matrix)
+
+# Display the complexity parameter table
+printcp(pruned_tree)
+```
+
+The pruned tree has a relative error of 0.847 after 5 splits. This is about half as good as the full tree but is much simpler with 5 splits instead of 17 splits.
+
+## 4. Random Forest
+
+### Stress Level Random Forest
+```{r}
+library(randomForest)
+
+set.seed(128)
+
+# Train a Random Forest model
+rf_model <- randomForest(Stress_Level ~ Age + Gender + Occupation + Country + 
+                        Mental_Health_Condition + Severity + Consultation_History +
+                           Sleep_Hours + Work_Hours + Physical_Activity_Hours, 
+                         data = mh, ntree = 700, mtry = 2)
+
+# View model summary
+print(rf_model)
+
+# Plot variable importance
+varImpPlot(rf_model)
+```
+
+The estimate of error rate for this random forest is 65%. This means 65% of entries are wrongly predicted. The random forest is best at predicting low stress levels and the worst at predicting medium stress levels. The most important factors in this random forest are Gender, Hours of Sleep, Hours of Physical Activity, and Country.
+
+### 5. Clustering
+
+## K-Prototype Clustering
+```{r}
+library(clustMixType)
+set.seed(126)
+
+clustdata <- mh %>%
+  dplyr::select(Gender, Sleep_Hours, Physical_Activity_Hours, Country)
+
+# K-prototypes for mixed data (categorical + numerical)
+kprototypes_result <- kproto(clustdata, k = 3)
+
+print(kprototypes_result$centers)
+
+mh$Cluster <- as.factor(kprototypes_result$cluster)
+
+counts <- mh %>%
+  group_by(Cluster, Stress_Level) %>%
+  summarise(Count = n(), .groups = "drop")
+
+ggplot(counts, aes(x = Cluster, y = Stress_Level, fill = Count)) +
+  geom_tile(color = "white") + # Create tiles with borders
+  geom_text(aes(label = Count), color = "black", size = 4) + # Add counts as text
+  scale_fill_gradient(low = "white", high = "forestgreen") + # Adjust the color gradient
+  theme_minimal() + # Minimal theme
+  labs(
+    title = "Stress Levels by Cluster",
+    x = "Cluster",
+    y = "Stress Level",
+    fill = "Count"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, family = "serif"),
+    axis.text = element_text(size = 12, family = "serif")
+  )
+```
+
+```{r}
+contingency_table <- table(mh$Stress_Level, mh$Cluster)
+chisq.test(contingency_table)
+```
+
+We cannot confirm that there is an association between cluster and stress level.
+
+## Hierarchical Clustering with Gower distance
+```{r}
+library(cluster)  # For Gower distance and clustering
+set.seed(126)
+
+clustdata <- dplyr::select(mh, Gender, Sleep_Hours, Physical_Activity_Hours, Country)
+
+# Compute Gower distance for mixed data
+gower_dist <- daisy(clustdata, metric = "gower")
+
+# Hierarchical clustering using Gower distance
+hclust_result <- hclust(as.dist(gower_dist), method = "average")
+
+# Cut the dendrogram into clusters
+clusters <- cutree(hclust_result, k = 3)
+
+mh$Cluster <- as.factor(clusters)
+
+counts <- mh %>%
+  group_by(Cluster, Stress_Level) %>%
+  summarise(Count = n(), .groups = "drop")
+
+ggplot(counts, aes(x = Cluster, y = Stress_Level, fill = Count)) +
+  geom_tile(color = "white") + # Create tiles with borders
+  geom_text(aes(label = Count), color = "black", size = 4) + # Add counts as text
+  scale_fill_gradient(low = "white", high = "darkgoldenrod1") + # Adjust the color gradient
+  theme_minimal() + # Minimal theme
+  labs(
+    x = "Cluster",
+    y = "Stress Level",
+    fill = "Count"
+  ) +
+  theme(
+    axis.title = element_text(size = 17, family = "serif"),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  )
+```
+
+It appears that cluster 1 has mostly low stress levels, cluster 2 has mostly medium stress levels, and cluster 3 has mostly high stress levels.
+
+```{r}
+contingency_table <- table(mh$Stress_Level, mh$Cluster)
+chisq.results <- chisq.test(contingency_table)
+print(chisq.results)
+
+chisq.results$stdres
+```
+
+The Chi-squared test confirms that the clusters and stress level are associated. It also confirms my observation about what cluster is with each stress level except cluster 2 is more strongly associated with not having low stress levels than with having medium stress levels.
+
+### Get "Centers" of each Cluster
+```{r}
+# Mode Function
+get_mode <- function(x) {
+  uniqx <- unique(x)
+  uniqx[which.max(tabulate(match(x, uniqx)))]
+}
+
+# Compute cluster centers
+cluster_centers1 <- mh %>%
+  group_by(Cluster) %>%
+  summarise(
+    Gender = get_mode(Gender), 
+    Country = get_mode(Country),  
+    Occupation = get_mode(Occupation),
+    Mental_Health_Condition = get_mode(Mental_Health_Condition)
+  )
+
+cluster_centers2 <- mh %>%
+  group_by(Cluster) %>%
+  summarise(
+    Severity = get_mode(Severity),
+    Consultation_History = get_mode(Consultation_History),
+    Age = mean(Age)
+  )
+
+cluster_centers3 <- mh %>%
+  group_by(Cluster) %>%
+  summarise(
+    Physical_Activity_Hours = mean(Physical_Activity_Hours),
+    Work_Hours = mean(Work_Hours),
+    Sleep_Hours = mean(Sleep_Hours)      
+  )
+
+print(cluster_centers1)
+print(cluster_centers2)
+print(cluster_centers3)
+```
+
+The most common group in cluster 1 are Indians who didn't put or put other for their gender, exercise about 5.27 hours per week, and sleep about 7.04 hours per night.
+The most common group in cluster 2 are female Germans who exercise about 4.96 hours per week and sleep about 7.25 hours per night.
+The most common group in cluster 3 are male Australians who exercise about 5.06 hours per week and sleep about 7.03 hours per night.
+These are the most common groups per cluster, but these groups make up a very small portion of the cluster.
+
+
